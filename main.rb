@@ -74,24 +74,25 @@ put '/rdb/procedure/:procedure' do
 end
 
 def load_user_provided_mysql
-  user_provided_mysql = load_user_provided_service('cloudn-rdb')
-  client = Mysql2::Client.new(:host => user_provided_mysql['host'],
-                              :port => user_provided_mysql['port'].to_i, 
-                              :username => user_provided_mysql['username'],
-                              :password => user_provided_mysql['password'],
-                              :database => user_provided_mysql['dbname'])
+  user_provided_mysql = load_user_provided_service
+  client = Mysql2::Client.new(:host => user_provided_mysql['Address'],
+                              :port => user_provided_mysql['Port'].to_i, 
+                              :username => user_provided_mysql['Username'],
+                              :password => user_provided_mysql['Password'],
+                              :database => user_provided_mysql['DBName'])
   result = client.query("SELECT table_name FROM information_schema.tables WHERE table_name = 'data_values'");
   client.query("Create table IF NOT EXISTS data_values ( id varchar(20), data_value varchar(20)); ") if result.count != 1
   client
 end
 
-def load_user_provided_service(service_name)
+def load_user_provided_service(service_name=nil)
   services = JSON.parse(ENV['VCAP_SERVICES'])
   user_provided_services = services['user-provided']
   credentials = nil
   user_provided_services.each do |entry|
-    if entry["name"].downcase == service_name.downcase
-        credentials = entry["credentials"]
+    credentials = entry["credentials"]
+    if service_name && (entry["name"].downcase != service_name.downcase)
+      raise "Given service name '#{service_name}' does not match with value from VCAP_SERVICES '#{entry["name"].downcase}'"
     end
   end
   return credentials
